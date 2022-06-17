@@ -14,3 +14,16 @@ The initial research article from Intezer and BlackBerry included a list of file
 - Next, the script lists the content of the temporary directory and counts the number of files within. If the number of files within that directory listing is less than the number of files initially placed in the directory, that could be an indication of the presence of Symbiote. 
 - Then, the script also checks the LD_PRELOAD environment variable and the `/etc/ld.so.preload` file for the existence of any value, which is extremely uncommon in most scenarios. 
 - Finally, the script determines if there are any processes currently running with the LD_PRELOAD environment variable set.
+
+-----------------------------------------------------------------------------------------------------
+## Usage
+  `$ sudo bash symbload_check.sh`
+  
+  
+ ## Testing
+  
+  The sample used for testing can be obtained on [MalwareBazaar](https://bazaar.abuse.ch/sample/a0cd554c35dee3fed3d1607dc18debd1296faaee29b5bd77ff83ab6956a6f9d6/) or [VirusTotal](https://www.virustotal.com/gui/file/a0cd554c35dee3fed3d1607dc18debd1296faaee29b5bd77ff83ab6956a6f9d6).
+
+Rename the file to `liblinux.so` on your test system, and place it in `/lib/x86_64-linux-gnu`.
+
+Highly recommended to be performed on a host with no connection to any other hosts.
