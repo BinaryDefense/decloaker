@@ -5,15 +5,17 @@
   -----------------------------------------------------------------------------------------------
 
 
-A script that attempts to decloak symbiote activity, and some other LD_PRELOAD activity.
+A script that attempts to decloak Symbiote activity, and some other `LD_PRELOAD` activity.
 
 During Binary Defense's research of Symbiote, we found some promising methods of detecting its presence. 
 The initial research article from Intezer and BlackBerry included a list of files that they had observed being hidden across multiple samples of the malware. We created a shell script that utilizes these artifacts to try to determine if the system is infected with Symbiote. 
 
-- First, the shell script creates a temporary directory and populates it with files that match the names found in the malware samples. 
-- Next, the script lists the content of the temporary directory and counts the number of files within. If the number of files within that directory listing is less than the number of files initially placed in the directory, that could be an indication of the presence of Symbiote. 
-- Then, the script also checks the LD_PRELOAD environment variable and the `/etc/ld.so.preload` file for the existence of any value, which is extremely uncommon in most scenarios. 
-- Finally, the script determines if there are any processes currently running with the LD_PRELOAD environment variable set.
+1. First, the shell script creates a temporary directory and populates it with files that match the names found in the malware samples.
+2. Next, the script lists the content of the temporary directory and counts the number of files within. If the number of files within that directory listing is less than the number of files initially placed in the directory, that could be an indication of the presence of Symbiote. 
+    - If `LD_PRELOAD` and/or `/etc/ld.so.preload` are present, it will try to unset/remove them and compare directory listing lengths.
+      - They are then restored and the temporary directory is removed.
+3. Then, the script also checks the `LD_PRELOAD` environment variable and the `/etc/ld.so.preload` file for the existence of any value, which is extremely uncommon in most scenarios. 
+4. Finally, the script determines if there are any processes currently running with the `LD_PRELOAD` environment variable set.
 
 -----------------------------------------------------------------------------------------------------
 ## Usage
