@@ -1,4 +1,10 @@
-# symbiote-preload-check
+# Symbiote behavior and LD_PRELOAD artifact check
+![image](https://user-images.githubusercontent.com/49037260/174408044-30d56820-7210-407f-96fa-6e3cd0c02d66.png)
+<sub> Note: `liblinear.so`, `libproxy.so`, and `libcrypto.so` are legitimate Shared Object files used for testing purposes only. `liblinux.so` is an actual Symbiote sample.
+  
+  -----------------------------------------------------------------------------------------------
+
+
 A script that attempts to decloak symbiote activity, and some other LD_PRELOAD activity
 
 During Binary Defense's research of Symbiote, we found some promising methods of detecting its presence. 
