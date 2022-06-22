@@ -16,6 +16,94 @@ echo -e "${LGRAY}This script is meant to be supplementary to an investigation in
 echo -e "Due to the nature of rootkits, host based forensics should always be treated with skepticism when investigating."
 echo
 
+echo -e "${GRAY}---------------------------${NC}${MAGE}Checking for Syslogk${NC}${GRAY}-------------------------------------${NC}"
+echo
+
+echo '1'>/proc/syslogk 2>/dev/null
+lsmod | grep -i syslogk
+grep_rtrn=$?
+
+if [ $grep_rtrn -eq 0 ]; then
+	echo -e "${RED}[!] System is infected with Syslogk rootkit${NC}"
+	netstat -tulpn |grep LISTEN|awk '{ print $7 }' |grep '^-$'
+	payload_rtrn=$?
+	if [ $payload_rtrn -eq 0 ]; then
+		echo -e "${RED}---> [!] Backdoor payload active"
+		bad_proc=$(netstat -tulpn |grep LISTEN|grep ' -'|awk '{ print $4 }')
+		backdoor=1
+	else
+		echo -e "${YELLOW}---> [~] Backdoor payload not currently active"
+		backdoor=0
+	fi
+	while true; do
+		echo -e -n "${CYAN}------> [?] Remove Syslogk from memory? (Y/N): ${NC}"
+		read confirm
+		if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+			ls -l /etc | awk '{ print $9 }' > pre_decloak.txt
+			rmmod syslogk
+			echo -e "${GREEN}---------> [*] Syslogk removed from memory.${NC}"
+			ls -l /etc | awk '{ print $9 }' > post_decloak.txt
+			if [ $backdoor -eq 1 ]; then
+				echo -e -n "${CYAN}---------> [?] Kill backdoor process? (Y/N): ${NC}"
+				read confirm
+				if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+					for x in $(netstat -tulpn | grep $bad_proc | awk '{ print $7 }' | cut -d'/' -f1); do kill $x; echo -e "${GREEN}------------> $x killed"; done
+                                	p_exist=$(comm -3 <(sort pre_decloak.txt) <(sort post_decloak.txt)|sed -u 's/\t//g')
+                                	if [ ! -z $p_exist ]; then
+						echo -e "${RED}------------> [!] Backdoor payload file found in /etc/$p_exist/$(ls /etc/$p_exist)${NC}"
+						echo -e -n "${CYAN}---------------> [?] Remove backdoor payload file? (Y/N): ${NC}"
+						read confirm
+						if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+							rm -rf /etc/$p_exist
+							echo -e "${GREEN}------------------> [*] Payload removed.${NC}"
+							break
+						else
+							echo -e "${YELLOW}------------------> [~] Leaving /etc/$p_exist/$(ls /etc/$p_exist) in place.${NC}"
+							break
+						fi
+
+                                	else
+                                	        echo -e "${RED}------------> [!] Backdoor payload file not found.${NC}"
+						break
+                                	fi
+				else
+					echo -e "${YELLOW}------------> [~] Leaving backdoor process alive. PIDs:"
+					for x in $(netstat -tulpn | grep $bad_proc | awk '{ print $7 }' | cut -d'/' -f1); do echo -e "---------------> ${RED}$x${NC}"; done
+					break
+				fi
+			else
+				echo -e "${GREEN}---------> [*] No backdoor process found.${NC}"
+				echo -e "${YELLOW}------------> [~] Looking for dormant backoor payload file...${NC}"
+                                p_exist=$(comm -3 <(sort pre_decloak.txt) <(sort post_decloak.txt)|sed -u 's/\t//g')
+                                if [ ! -z $p_exist ]; then
+                                        echo -e "${RED}---------------> [!] Backdoor payload file found in /etc/$p_exist/$(ls /etc/$p_exist)${NC}"
+					echo -e -n "${CYAN}------------------> [?] Remove backdoor payload file? (Y/N): ${NC}"
+					read confirm
+                                        if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+                                                rm -rf /etc/$p_exist
+						echo -e "${GREEN}------------------> [*] Payload removed.${NC}"
+                                                break
+                                        else
+                                                echo -e "${YELLOW}------------------> [~] Leaving /etc/$p_exist/$(ls /etc/$p_exist) in place"
+                                                break
+                                        fi
+
+                                else
+                                        echo -e "${GREEN}---------------> [*] Backdoor payload file not found${NC}"
+                                        break
+				fi
+			fi
+		else
+			echo -e "${YELLOW}---------> [~] Leaving Syslogk in place.${NC}"
+			break
+		fi
+	done
+else
+	echo -e "${GREEN}[*] Syslogk not detected.${NC}"
+fi
+rm -f *_decloak.txt
+echo
+
 echo -e "${GRAY}---------------------------${NC}${MAGE}Checking for Symbiote${NC}${GRAY}-------------------------------------${NC}"
 echo
 	mkdir -p ./symbiote_test
