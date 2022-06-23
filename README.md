@@ -5,7 +5,7 @@
   -----------------------------------------------------------------------------------------------
 
 
-A script that attempts to decloak Symbiote activity, and some other `LD_PRELOAD` activity.
+# Symbiote
 
 During Binary Defense's research of Symbiote, we found some promising methods of detecting its presence. 
 The initial research article from Intezer and BlackBerry included a list of files that they had observed being hidden across multiple samples of the malware. We created a shell script that utilizes these artifacts to try to determine if the system is infected with Symbiote. 
@@ -16,6 +16,18 @@ The initial research article from Intezer and BlackBerry included a list of file
       - They are then restored and the temporary directory is removed.
 3. Then, the script also checks the `LD_PRELOAD` environment variable and the `/etc/ld.so.preload` file for the existence of any value, which is extremely uncommon in most scenarios. 
 4. Finally, the script determines if there are any processes currently running with the `LD_PRELOAD` environment variable set.
+
+# Syslogk
+
+The basis of the detection of Syslogk is the apparent built in killswitch discovered by researchers at Avast. Simply performing `echo 1>/proc/syslogk` will decloak the rootkit, otherwise that command will result in a write error. If the command goes through with no error that could indicate Syslogk presence. To confirm you can run `lsmod | grep syslogk`. Then removing the module from memory is done with `rmmod syslogk`, and this will reveal the presence of the associated Rekoobe implant whether it be actively listening on some TCP port, or if any decloaked directories in `/etc` were found.
+  
+1. A listing of `/etc` is saved to compare to later.
+2. `echo 1>/proc/syslogk` is performed to attempt to reveal Syslogk.
+3. If Syslogk is revealed in `lsmod` it will ask if you'd like to remove the module from memory. Answering yes will execute `rmmod syslogk`, which will reveal Rekoobe artifacts, otherwise they will still be hidden and the script will end.
+4. If the Redkoobe is found and listening you will be given the option to kill the process.
+5. Whether you decide to kill the process or not, the script will attempt to find the directory housing the payload in `/etc`.
+6. If the payload is found, you will be asked if you'd like to remove it.
+  
 
 -----------------------------------------------------------------------------------------------------
 ## Usage
