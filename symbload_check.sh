@@ -25,11 +25,11 @@ grep_rtrn=$?
 
 if [ $grep_rtrn -eq 0 ]; then
 	echo -e "${RED}[!] System is infected with Syslogk rootkit${NC}"
-	netstat -tulpn |grep LISTEN|awk '{ print $7 }' |grep '^-$'
+	netstat -tulpn |grep LISTEN|awk '{ print $7 }' |grep -q '^-$'
 	payload_rtrn=$?
 	if [ $payload_rtrn -eq 0 ]; then
 		echo -e "${RED}---> [!] Backdoor payload active"
-		bad_proc=$(netstat -tulpn |grep LISTEN|grep ' -'|awk '{ print $4 }')
+		bad_procs=$(netstat -tulpn |grep LISTEN|grep ' -'|awk '{ print $4 }')
 		backdoor=1
 	else
 		echo -e "${YELLOW}---> [~] Backdoor payload not currently active"
@@ -39,52 +39,73 @@ if [ $grep_rtrn -eq 0 ]; then
 		echo -e -n "${CYAN}------> [?] Remove Syslogk from memory? (Y/N): ${NC}"
 		read confirm
 		if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-			ls -l /etc | awk '{ print $9 }' > pre_decloak.txt
+			find /etc -type f > pre_decloak.txt
 			rmmod syslogk
 			echo -e "${GREEN}---------> [*] Syslogk removed from memory.${NC}"
-			ls -l /etc | awk '{ print $9 }' > post_decloak.txt
+			find /etc -type f > post_decloak.txt
 			if [ $backdoor -eq 1 ]; then
-				echo -e -n "${CYAN}---------> [?] Kill backdoor process? (Y/N): ${NC}"
+				bad_pids=$(for x in $bad_procs; do netstat -tulpn | grep $x | awk '{ print $7 }' | cut -d'/' -f1; done)
+				bad_files=$(for x in $bad_pids; do ls -l /proc/$x/exe| awk '{ print $11 }'; done|sort|uniq|tr '\n' ' ')
+				echo -e -n "${CYAN}-----------> [?] Kill backdoor process? (Y/N): ${NC}"
 				read confirm
 				if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-					for x in $(netstat -tulpn | grep $bad_proc | awk '{ print $7 }' | cut -d'/' -f1); do kill $x; echo -e "${GREEN}------------> $x killed"; done
-                                	p_exist=$(comm -3 <(sort pre_decloak.txt) <(sort post_decloak.txt)|sed -u 's/\t//g')
-                                	if [ ! -z $p_exist ]; then
-						echo -e "${RED}------------> [!] Backdoor payload file found in /etc/$p_exist/$(ls /etc/$p_exist)${NC}"
+					for x in $bad_pids; do kill $x; echo -e "${GREEN}------------> $x killed"; done
+                                	p_exist=$(comm -3 <(sort pre_decloak.txt) <(sort post_decloak.txt)|sed -u 's/\t//g'|tr '\n' ' ')
+                                	if [[ ! -z $p_exist || ! -z $bad_files ]]; then
+						file_array=($(echo $p_exist) $(echo $bad_files))
+						empt_array=()
+						for x in $file_array; do 
+							if printf '%s\0' "${file_array[@]}" | grep -Fxqz $x; then
+								empt_array+=$x
+							else
+								:
+							fi;
+						done
+						echo -e "${RED}------------> [!] Backdoor payload file found in ${empt_array[@]}${NC}"
 						echo -e -n "${CYAN}---------------> [?] Remove backdoor payload file? (Y/N): ${NC}"
 						read confirm
 						if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-							rm -rf /etc/$p_exist
+							rm -rf ${empt_array[@]}
 							echo -e "${GREEN}------------------> [*] Payload removed.${NC}"
+							echo -e "${GRAY}                        Note: Payload parent directory remains, in order to ensure this script doesn't delete important directories. Manual cleanup required.${NC}"
 							break
 						else
-							echo -e "${YELLOW}------------------> [~] Leaving /etc/$p_exist/$(ls /etc/$p_exist) in place.${NC}"
+							echo -e "${YELLOW}------------------> [~] Leaving $p_exist in place.${NC}"
 							break
 						fi
-
                                 	else
-                                	        echo -e "${RED}------------> [!] Backdoor payload file not found.${NC}"
+                                	        echo -e "${RED}------------> [!] Backdoor payload file not found in.${NC}"
 						break
                                 	fi
 				else
-					echo -e "${YELLOW}------------> [~] Leaving backdoor process alive. PIDs:"
-					for x in $(netstat -tulpn | grep $bad_proc | awk '{ print $7 }' | cut -d'/' -f1); do echo -e "---------------> ${RED}$x${NC}"; done
+					echo -e "${YELLOW}------------> [~] Leaving backdoor process alive. PIDs: $(for x in $bad_pids; do netstat -tulpn | grep $x | awk '{ print $7 }' | cut -d'/' -f1; done|tr '\n' ' ')"
+					#for x in $bad_pids; do echo -e "${RED}---------------> $(netstat -tulpn | grep $x | awk '{ print $7 }' | cut -d'/' -f1)${NC}";  done
 					break
 				fi
 			else
 				echo -e "${GREEN}---------> [*] No backdoor process found.${NC}"
 				echo -e "${YELLOW}------------> [~] Looking for dormant backoor payload file...${NC}"
                                 p_exist=$(comm -3 <(sort pre_decloak.txt) <(sort post_decloak.txt)|sed -u 's/\t//g')
-                                if [ ! -z $p_exist ]; then
-                                        echo -e "${RED}---------------> [!] Backdoor payload file found in /etc/$p_exist/$(ls /etc/$p_exist)${NC}"
+                                if [[ ! -z $p_exist || ! -z $bad_files ]]; then
+					file_array=($(echo $p_exist) $(echo $bad_files))
+                                        empt_array=()
+                                        for x in $file_array; do
+                                                if printf '%s\0' "${file_array[@]}" | grep -Fxqz $x; then
+                                                        empt_array+=$x
+                                                else
+                                                        :
+                                                fi;
+                                        done
+                                        echo -e "${RED}---------------> [!] Backdoor payload file found in ${empt_array[@]}${NC}"
 					echo -e -n "${CYAN}------------------> [?] Remove backdoor payload file? (Y/N): ${NC}"
 					read confirm
                                         if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-                                                rm -rf /etc/$p_exist
+                                                rm -rf ${empt_array[@]}
 						echo -e "${GREEN}------------------> [*] Payload removed.${NC}"
+						echo -e "${LGRAY}                        Note: Payload parent directory remains, in order to ensure this script doesn't delete important directories. Manual cleanup required.${NC}"
                                                 break
                                         else
-                                                echo -e "${YELLOW}------------------> [~] Leaving /etc/$p_exist/$(ls /etc/$p_exist) in place"
+                                                echo -e "${YELLOW}------------------> [~] Leaving ${empt_array[@]} in place"
                                                 break
                                         fi
 
@@ -99,6 +120,7 @@ if [ $grep_rtrn -eq 0 ]; then
 		fi
 	done
 else
+	echo -e "${GRAY}↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑Ignore this↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑"
 	echo -e "${GREEN}[*] Syslogk not detected.${NC}"
 fi
 rm -f *_decloak.txt
