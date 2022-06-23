@@ -79,7 +79,6 @@ if [ $grep_rtrn -eq 0 ]; then
                                 	fi
 				else
 					echo -e "${YELLOW}------------> [~] Leaving backdoor process alive. PIDs: $(for x in $bad_pids; do netstat -tulpn | grep $x | awk '{ print $7 }' | cut -d'/' -f1; done|tr '\n' ' ')"
-					#for x in $bad_pids; do echo -e "${RED}---------------> $(netstat -tulpn | grep $x | awk '{ print $7 }' | cut -d'/' -f1)${NC}";  done
 					break
 				fi
 			else
