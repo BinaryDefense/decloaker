@@ -4,8 +4,8 @@
 <sub> Note: `liblinear.so`, `libproxy.so`, and `libcrypto.so` are legitimate Shared Object files used for testing purposes only. `liblinux.so` is an actual Symbiote sample.
   
   -----------------------------------------------------------------------------------------------
-# Supported rootkits
-## Symbiote
+## Supported rootkits
+### Symbiote and generic LD_PRELOAD
 
 During Binary Defense's research of Symbiote, we found some promising methods of detecting its presence. 
 The initial research article from Intezer and BlackBerry included a list of files that they had observed being hidden across multiple samples of the malware. We created a shell script that utilizes these artifacts to try to determine if the system is infected with Symbiote. 
@@ -17,7 +17,7 @@ The initial research article from Intezer and BlackBerry included a list of file
 3. Then, the script also checks the `LD_PRELOAD` environment variable and the `/etc/ld.so.preload` file for the existence of any value, which is extremely uncommon in most scenarios. 
 4. Finally, the script determines if there are any processes currently running with the `LD_PRELOAD` environment variable set.
 
-## Syslogk
+### Syslogk
 
 The basis of the detection of Syslogk is the apparent built in killswitch discovered by researchers at Avast. Simply performing `echo 1>/proc/syslogk` will decloak the rootkit, otherwise that command will result in a write error. If the command goes through with no error that could indicate Syslogk presence. To confirm you can run `lsmod | grep syslogk`. Then removing the module from memory is done with `rmmod syslogk`, and this will reveal the presence of the associated Rekoobe implant whether it be actively listening on some TCP port, or if any decloaked directories in `/etc` were found.
   
@@ -30,11 +30,11 @@ The basis of the detection of Syslogk is the apparent built in killswitch discov
   
 
 -----------------------------------------------------------------------------------------------------
-## Usage
+### Usage
   `$ sudo bash symbload_check.sh`
   
   
- ## Testing
+ ### Testing
   
   The sample used for testing can be obtained on [MalwareBazaar](https://bazaar.abuse.ch/sample/a0cd554c35dee3fed3d1607dc18debd1296faaee29b5bd77ff83ab6956a6f9d6/) or [VirusTotal](https://www.virustotal.com/gui/file/a0cd554c35dee3fed3d1607dc18debd1296faaee29b5bd77ff83ab6956a6f9d6).
 
